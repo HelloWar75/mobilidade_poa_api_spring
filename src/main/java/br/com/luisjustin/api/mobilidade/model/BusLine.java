@@ -16,8 +16,7 @@ public class BusLine extends AuditModel{
     )
     private Long id;
 
-    @NotBlank
-    private Integer lineId;
+    private int lineId;
 
     @NotBlank
     private String lineCode;
@@ -33,7 +32,7 @@ public class BusLine extends AuditModel{
         this.id = id;
     }
 
-    public Integer getLineId() {
+    public int getLineId() {
         return lineId;
     }
 

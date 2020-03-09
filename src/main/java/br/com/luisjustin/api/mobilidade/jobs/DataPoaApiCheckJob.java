@@ -1,5 +1,6 @@
 package br.com.luisjustin.api.mobilidade.jobs;
 
+import br.com.luisjustin.api.mobilidade.model.BusLine;
 import br.com.luisjustin.api.mobilidade.model.json.BusLineJson;
 import br.com.luisjustin.api.mobilidade.repository.BusLineRepository;
 import java.lang.String;
@@ -30,7 +31,11 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
 
-        //Começar puxando todos
+        fetchBusLinesAndSaveIt();
+
+    }
+
+    private void fetchBusLinesAndSaveIt() {
         URL obj = null;
         try {
             obj = new URL("http://www.poatransporte.com.br/php/facades/process.php?a=nc&p=%&t=o");
@@ -73,12 +78,24 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
             BusLineJson[] bus_line_json = gson.fromJson(response.toString(), BusLineJson[].class);
 
             for(BusLineJson b : bus_line_json) {
-                System.out.println("Nome: " + b.getNome() );
+
+                try {
+                    BusLine bl = buslineRepo.findByLineId(b.getId());
+                    bl.setLineCode(b.getCodigo());
+                    bl.setLineName(b.getNome());
+                    buslineRepo.save(bl);
+                }catch (Exception ex){
+                    BusLine busLine = new BusLine();
+                    busLine.setLineId(b.getId());
+                    busLine.setLineCode(b.getCodigo());
+                    busLine.setLineName(b.getNome());
+                    buslineRepo.save(busLine);
+                }
+
             }
 
         }else{
             System.out.println("GET Request not worked");
         }
-
     }
 }

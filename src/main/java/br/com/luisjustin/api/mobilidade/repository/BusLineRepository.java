@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BusLineRepository extends JpaRepository<BusLine, Long> {
-
+    BusLine findByLineId(int line_code);
 }
