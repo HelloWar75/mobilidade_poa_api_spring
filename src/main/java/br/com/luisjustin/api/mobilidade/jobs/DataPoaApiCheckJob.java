@@ -5,6 +5,9 @@ import br.com.luisjustin.api.mobilidade.model.json.BusLineJson;
 import br.com.luisjustin.api.mobilidade.repository.BusLineRepository;
 import java.lang.String;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -18,6 +21,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.util.Iterator;
+import java.util.Map;
 
 public class DataPoaApiCheckJob extends QuartzJobBean {
 
@@ -32,6 +37,49 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
 
         fetchBusLinesAndSaveIt();
+        try {
+            fetchBusMapAndSaveIt(5566);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void fetchBusMapAndSaveIt(int id) throws IOException {
+        URL obj = null;
+        obj = new URL("http://www.poatransporte.com.br/php/facades/process.php?a=il&p=" + id);
+        HttpURLConnection con = null;
+        con = (HttpURLConnection) obj.openConnection();
+        con.setRequestMethod("GET");
+        con.setRequestProperty("User-Agent", USER_AGENT);
+        int response_code = 0;
+        response_code = con.getResponseCode();
+        if( response_code == HttpURLConnection.HTTP_OK ) {
+            StringBuffer response = null;
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            response = new StringBuffer();
+
+            while((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            JsonFactory factory = new JsonFactory();
+
+            ObjectMapper mapper = new ObjectMapper(factory);
+            JsonNode rootNode = mapper.readTree(response.toString());
+            Iterator<Map.Entry<String, JsonNode>> fieldsIterator = rootNode.fields();
+            while( fieldsIterator.hasNext() ) {
+                Map.Entry<String, JsonNode> field = fieldsIterator.next();
+                if( field.getKey() != "idlinha" || field.getKey() != "nome" || field.getKey() != "codigo" ) {
+                    System.out.println("Key: " + field.getKey() + "\tValue: " + field.getValue());
+                }
+            }
+
+        }
+
+
 
     }
 
