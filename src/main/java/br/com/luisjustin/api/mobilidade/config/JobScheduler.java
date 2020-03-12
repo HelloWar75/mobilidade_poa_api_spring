@@ -17,7 +17,7 @@ public class JobScheduler {
     @Bean
     public Trigger checkApiJobTrigger() {
         SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
-                .withIntervalInSeconds(5).repeatForever();
+                .withIntervalInHours(1).repeatForever();
 
         return TriggerBuilder.newTrigger().forJob(checkApiJobDetail())
                 .withIdentity("DataPoaCheckApiTrigger").withSchedule(scheduleBuilder).build();

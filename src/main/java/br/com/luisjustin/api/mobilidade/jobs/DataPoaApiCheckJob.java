@@ -1,10 +1,12 @@
 package br.com.luisjustin.api.mobilidade.jobs;
 
 import br.com.luisjustin.api.mobilidade.model.BusLine;
+import br.com.luisjustin.api.mobilidade.model.BusMap;
 import br.com.luisjustin.api.mobilidade.model.json.BusLineJson;
 import br.com.luisjustin.api.mobilidade.repository.BusLineRepository;
 import java.lang.String;
 
+import br.com.luisjustin.api.mobilidade.repository.BusMapRepository;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,17 +33,21 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
     @Autowired
     private BusLineRepository buslineRepo;
 
+    @Autowired
+    private BusMapRepository busmapRepo;
+
     private Gson gson = new Gson();
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
 
-        fetchBusLinesAndSaveIt();
         try {
-            fetchBusMapAndSaveIt(5566);
+            fetchBusLinesAndSaveIt();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        System.out.println("FIMMMMMMM");
 
     }
 
@@ -70,10 +76,29 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
             ObjectMapper mapper = new ObjectMapper(factory);
             JsonNode rootNode = mapper.readTree(response.toString());
             Iterator<Map.Entry<String, JsonNode>> fieldsIterator = rootNode.fields();
+            String idlinha;
+            String nome;
+            String codigo;
+
+            busmapRepo.deleteByBusLineId(buslineRepo.findByLineId(id).getId());
+
             while( fieldsIterator.hasNext() ) {
                 Map.Entry<String, JsonNode> field = fieldsIterator.next();
-                if( field.getKey() != "idlinha" || field.getKey() != "nome" || field.getKey() != "codigo" ) {
-                    System.out.println("Key: " + field.getKey() + "\tValue: " + field.getValue());
+                if( field.getKey() != "idlinha" && field.getKey() != "nome" && field.getKey() != "codigo" ) {
+
+                    BusMap bMap = new BusMap();
+                    bMap.setPosition(Long.valueOf(field.getKey()));
+                    bMap.setBusLine(buslineRepo.findByLineId(id));
+                    bMap.setLat(Double.valueOf(field.getValue().get("lat").toString().replace("\"", "")));
+                    bMap.setLng(Double.valueOf(field.getValue().get("lng").toString().replace("\"", "")));
+                    busmapRepo.save(bMap);
+
+                }else if( field.getKey() == "idlinha" ) {
+                    idlinha = field.getValue().toString();
+                }else if( field.getKey() == "nome") {
+                    nome = field.getValue().toString();
+                }else if( field.getKey() == "codigo" ) {
+                    codigo = field.getValue().toString();
                 }
             }
 
@@ -83,7 +108,7 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
 
     }
 
-    private void fetchBusLinesAndSaveIt() {
+    private void fetchBusLinesAndSaveIt() throws IOException {
         URL obj = null;
         try {
             obj = new URL("http://www.poatransporte.com.br/php/facades/process.php?a=nc&p=%&t=o");
@@ -139,6 +164,8 @@ public class DataPoaApiCheckJob extends QuartzJobBean {
                     busLine.setLineName(b.getNome());
                     buslineRepo.save(busLine);
                 }
+
+                fetchBusMapAndSaveIt(b.getId());
 
             }
 
